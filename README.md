@@ -1,16 +1,22 @@
-## Hi there 👋
+# Hi, I'm Michael Almonte (almontemichaelc-rgb)! 🚀
 
-<!--
-**almontemichaelc-rgb/almontemichaelc-rgb** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+### AASS Software Engineering Student | Focused on Python Fundamentals
 
-Here are some ideas to get you started:
+I am currently a student in the **AASS Software Engineering** program, building a foundation in clean code structure, functions, and fundamental logic. I am actively seeking an **internship** opportunity where I can apply my growing skills in core programming principles.
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+---
+
+## 📁 My Core Code Portfolio
+
+This section showcases my ability to translate business logic into functional, well-structured Python code.
+
+| Project Name | Skills Demonstrated | Live Repository Link |
+| :--- | :--- | :--- |
+| **Mini Cafe Receipt Generator** | Functions, Variables, Arithmetic, **Precise Currency Formatting** | [View Project Repository](https://github.com/almontemichaelc-rgb/mini-cafe-receipt-generator) |
+
+---
+
+## 🎯 Next Goal
+I am currently working on a **Grade Calculator** project to demonstrate mastery of iteration, lists, and control flow (`for` loops and `if/else` statements).
+
+Let's connect!
