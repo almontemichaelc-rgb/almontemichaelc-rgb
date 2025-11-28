@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Geometric Flow Field</title>
+    <!-- Load Tailwind for basic styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load p5.js library for creative coding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <style>
+        /* Custom CSS for a centered, clean look */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #0d1117; /* Dark background */
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            padding: 1rem;
+            user-select: none; /* Prevent selection on touch/drag */
+        }
+        main {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #333;
+            touch-action: none; /* Prevents default browser actions on touch */
+        }
+        .info-text {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <main id="sketch-container">
+        <!-- p5.js canvas will be injected here -->
+    </main>
+    <div class="info-text">
+        <p>💡 **Touch/Click & Drag** to emit high-speed particles!</p>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const FLOW_FIELD_RESOLUTION = 20; // Grid cell size (controls detail)
+        const STEP_SIZE = 15;           // Line movement speed (Much faster now)
+        const LINE_LENGTH = 100;        // Max length of each line path (Shorter for speed)
+        const MAX_PARTICLES = 2500;     // Max limit to prevent crash
+        // const BASE_HUE = 200;         // No longer needed, hue is now fully dynamic
+        let turbulenceScale = 0.02;     // Reduced for a more organized/geometric look
+
+        // --- Global Variables ---
+        let particles = [];
+        let flowField;
+        let p5Instance; // Reference to the p5 instance
+
+        /**
+         * The Particle class represents a single flowing line.
+         */
+        class Particle {
+            constructor(startX, startY) {
+                this.init(startX, startY);
+                this.maxPathLength = LINE_LENGTH;
+            }
+
+            init(x, y) {
+                // Start position: At mouse/touch coordinates with slight spread
+                this.pos = p5Instance.createVector(x, y);
+                this.pos.add(p5Instance.random(-10, 10), p5Instance.random(-10, 10));
+                this.path = [];
+                this.isDead = false;
+            }
+
+            /** Updates the particle's position based on the flow field and mouse. */
+            update() {
+                if (this.isDead) return;
+
+                let x = p5Instance.floor(this.pos.x / FLOW_FIELD_RESOLUTION);
+                let y = p5Instance.floor(this.pos.y / FLOW_FIELD_RESOLUTION);
+                const cols = p5Instance.floor(p5Instance.width / FLOW_FIELD_RESOLUTION);
+                const rows = p5Instance.floor(p5Instance.height / FLOW_FIELD_RESOLUTION);
+
+                // Check bounds and kill if off-screen
+                if (x < 0 || x >= cols || y < 0 || y >= rows) {
+                    this.isDead = true;
+                    return;
+                }
+
+                // Get force from the flow field
+                let index = x + y * cols;
+                let force = flowField[index];
+                
+                // If force is undefined (edge case), kill particle
+                if (!force) {
+                    this.isDead = true;
+                    return;
+                }
+
+                // --- Add Mouse/Touch Influence ---
+                if (p5Instance.mouseIsPressed || (p5Instance.touches.length > 0)) {
+                    let mx = p5Instance.mouseX;
+                    let my = p5Instance.mouseY;
+
+                    // Calculate a vector pointing from the particle to the mouse/touch position
+                    let directionToMouse = p5.Vector.sub(p5Instance.createVector(mx, my), this.pos);
+                    
+                    // The influence is stronger when closer to the mouse
+                    let distance = directionToMouse.mag();
+                    if (distance < 150) { // Influence radius
+                        // Normalize the direction vector and scale its influence
+                        directionToMouse.normalize();
+                        directionToMouse.mult(p5Instance.map(distance, 0, 150, 0.4, 0)); // Stronger pull when closer
+                        force.add(directionToMouse);
+                    }
+                }
+                
+                // Move the particle
+                let steer = force.copy(); // Copy to avoid modifying the original field
+                steer.normalize();
+                this.pos.add(p5.Vector.mult(steer, STEP_SIZE));
+
+                // Record and trim path
+                this.path.push(p5Instance.createVector(this.pos.x, this.pos.y));
+                if (this.path.length > this.maxPathLength) {
+                    this.path.shift();
+                }
+
+                // Check screen bounds for respawn
+                if (this.pos.x < 0 || this.pos.x > p5Instance.width || this.pos.y < 0 || this.pos.y > p5Instance.height) {
+                    this.isDead = true;
+                }
+            }
+
+            /** Draws the line path of the particle. */
+            draw() {
+                if (this.isDead || this.path.length < 2) return;
+
+                // Dynamic Line Thinness: Thinner lines when touching, thicker when static
+                let weight = 1.5; 
+                if (p5Instance.mouseIsPressed || (p5Instance.touches.length > 0)) {
+                    weight = 0.8; // Thinner line when touching
+                }
+                p5Instance.strokeWeight(weight);
+                p5Instance.noFill();
+
+                // Full Color Range: Map mouseX to the full 0-360 HSB spectrum
+                let dynamicHue = p5Instance.map(p5Instance.mouseX, 0, p5Instance.width, 0, 360);
+                
+                // Transparency: Line fades out as it gets older (closer to the beginning of the path)
+                let alpha = p5Instance.map(this.path.length, 0, this.maxPathLength, 0, 100);
+
+                // Use high Saturation (90) and Brightness (100) for vibrant colors
+                p5Instance.stroke(dynamicHue, 90, 100, alpha); 
+
+                p5Instance.beginShape();
+                for (let v of this.path) {
+                    p5Instance.vertex(v.x, v.y);
+                }
+                p5Instance.endShape();
+            }
+        }
+
+
+        // --- P5.js Sketch Instance ---
+        const sketch = (p) => {
+            p5Instance = p; // Assign the p5 instance
+
+            p.setup = () => {
+                // Determine canvas size dynamically
+                const canvasWidth = Math.min(600, window.innerWidth * 0.9);
+                const canvasHeight = Math.min(600, window.innerHeight * 0.8);
+                p.createCanvas(canvasWidth, canvasHeight);
+                
+                // Attempt to unlock framerate for smoother high-speed motion
+                p.frameRate(120);
+
+                // Set up Color Mode: HSB for easy hue manipulation
+                p.colorMode(p.HSB, 360, 100, 100, 100);
+
+                // Initial setup
+                p.background(0);
+                initializeFlowField();
+                
+                // Start with NO particles (Empty array)
+                particles = [];
+            };
+
+            p.draw = () => {
+                // 1. Fade the background slightly each frame (creates the trailing effect)
+                p.fill(0, 0, 0, 10); // Alpha of 10 gives a cleaner fade at high speeds
+                p.rect(0, 0, p.width, p.height);
+                p.noStroke();
+
+                // 2. Spawn particles if interacting
+                if (p.mouseIsPressed || p.touches.length > 0) {
+                     // Spawn multiple particles per frame for density
+                     for(let k = 0; k < 5; k++) {
+                         if (particles.length < MAX_PARTICLES) {
+                             particles.push(new Particle(p.mouseX, p.mouseY));
+                         }
+                     }
+                }
+
+                // 3. Update and draw all particles
+                // Iterate backwards to allow removal of dead particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    let particle = particles[i];
+                    particle.update();
+                    particle.draw();
+
+                    // Remove dead particles instead of respawning them
+                    if (particle.isDead) {
+                        particles.splice(i, 1);
+                    }
+                }
+            };
+
+            // Recalculate and reset when the window is resized
+            p.windowResized = () => {
+                // Recalculate dimensions for responsiveness
+                const canvasWidth = Math.min(600, window.innerWidth * 0.9);
+                const canvasHeight = Math.min(600, window.innerHeight * 0.8);
+                
+                p.resizeCanvas(canvasWidth, canvasHeight);
+                p.background(0); 
+                initializeFlowField();
+                
+                // Clear particles on resize
+                particles = [];
+            };
+
+            /** Generates the flow field (a grid of direction vectors) using Perlin Noise, with geometric snapping. */
+            function initializeFlowField() {
+                const cols = p.floor(p.width / FLOW_FIELD_RESOLUTION);
+                const rows = p.floor(p.height / FLOW_FIELD_RESOLUTION);
+                const numVectors = cols * rows;
+
+                flowField = new Array(numVectors);
+                let zoff = p.random(1000); 
+                let xoff = zoff;
+
+                for (let x = 0; x < cols; x++) {
+                    let yoff = zoff;
+                    for (let y = 0; y < rows; y++) {
+                        // Perlin Noise: The core of the organic movement
+                        let noiseValue = p.noise(xoff * turbulenceScale, yoff * turbulenceScale);
+                        
+                        // GEOMETRIC CHANGE: Snap the noise value (0 to 1) to one of 8 directions (0, 45, 90, etc.)
+                        let angle = p.round(noiseValue * 8) * p.PI / 4; 
+
+                        // Convert angle to a 2D vector
+                        let v = p.createVector(p.cos(angle), p.sin(angle));
+
+                        // Store the vector
+                        let index = x + y * cols;
+                        flowField[index] = v;
+
+                        yoff += 0.05; 
+                    }
+                    xoff += 0.05; 
+                }
+            }
+        };
+
+        // Initialize the p5 sketch, attaching it to the main container
+        window.onload = function () {
+            // We use instance mode (new p5) to keep the global namespace clean
+            new p5(sketch, 'sketch-container');
+        };
+        
+        // Prevent default touch scrolling/actions in the canvas area
+        document.addEventListener('touchstart', function(event) {
+            if (event.target.tagName === 'CANVAS') {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+    </script>
+</body>
+</html>
