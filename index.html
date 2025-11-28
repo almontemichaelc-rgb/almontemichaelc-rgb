@@ -3,18 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FlowField">
+
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
     <title>Interactive Geometric Flow Field</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
     
     <style>
-        /* CSS Reset for Full Screen Mobile Experience */
         body {
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevents scrollbars */
+            overflow: hidden; 
             background-color: #0d1117; 
-            touch-action: none; /* Disables browser zooming/panning gestures */
+            touch-action: none; 
+            /* safe-area-inset helps handle the "Notch" on newer iPhones */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         main {
             display: block;
@@ -22,7 +32,7 @@
             height: 100vh;
         }
         canvas {
-            display: block; /* Removes default inline spacing */
+            display: block; 
         }
     </style>
 </head>
@@ -34,11 +44,10 @@
         // --- Configuration ---
         const FLOW_FIELD_RESOLUTION = 20; 
         const STEP_SIZE = 15;           
-        const LINE_LENGTH = 80;        // Slightly shorter for mobile performance
-        const MAX_PARTICLES = 1500;     // Lowered slightly for mobile battery/performance optimization
+        const LINE_LENGTH = 80;        
+        const MAX_PARTICLES = 1500;     
         let turbulenceScale = 0.02;    
 
-        // --- Global Variables ---
         let particles = [];
         let flowField;
         let p5Instance; 
@@ -51,7 +60,6 @@
 
             init(x, y) {
                 this.pos = p5Instance.createVector(x, y);
-                // Random spread around the touch point
                 this.pos.add(p5Instance.random(-10, 10), p5Instance.random(-10, 10));
                 this.path = [];
                 this.isDead = false;
@@ -78,10 +86,7 @@
                     return;
                 }
 
-                // --- Touch/Mouse Interaction ---
-                // Works for both single mouse click and multi-touch on phones
                 if (p5Instance.mouseIsPressed || (p5Instance.touches.length > 0)) {
-                    // Iterate through all active touches to allow multi-finger drawing
                     let inputPoints = p5Instance.touches.length > 0 ? p5Instance.touches : [{x: p5Instance.mouseX, y: p5Instance.mouseY}];
                     
                     for (let point of inputPoints) {
@@ -123,7 +128,6 @@
                 p5Instance.strokeWeight(weight);
                 p5Instance.noFill();
 
-                // Dynamic Hue based on screen width
                 let dynamicHue = p5Instance.map(this.pos.x, 0, p5Instance.width, 0, 360);
                 let alpha = p5Instance.map(this.path.length, 0, this.maxPathLength, 0, 100);
 
@@ -141,9 +145,8 @@
             p5Instance = p; 
 
             p.setup = () => {
-                // Create canvas that fills the whole mobile window
                 p.createCanvas(p.windowWidth, p.windowHeight);
-                p.frameRate(60); // 60 FPS is standard for smooth mobile performance
+                p.frameRate(60); 
                 p.colorMode(p.HSB, 360, 100, 100, 100);
                 p.background(0);
                 initializeFlowField();
@@ -155,11 +158,9 @@
                 p.rect(0, 0, p.width, p.height);
                 p.noStroke();
 
-                // Handle spawning for Mouse AND Touch
                 if (p.mouseIsPressed) {
                      spawnParticles(p.mouseX, p.mouseY);
                 }
-                // Handle multi-touch spawning
                 if (p.touches.length > 0) {
                     for (let t of p.touches) {
                         spawnParticles(t.x, t.y);
@@ -178,8 +179,7 @@
             };
 
             function spawnParticles(x, y) {
-                // Spawn rate
-                for(let k = 0; k < 2; k++) { // Spawn 2 particles per frame per touch point
+                for(let k = 0; k < 2; k++) { 
                      if (particles.length < MAX_PARTICLES) {
                          particles.push(new Particle(x, y));
                      }
@@ -221,7 +221,6 @@
             new p5(sketch, 'sketch-container');
         };
         
-        // Prevent default touch behavior (scrolling) to allow drawing
         document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
     </script>
